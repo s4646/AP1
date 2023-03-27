@@ -41,7 +41,7 @@ int parse(char *command, char **argv, int *amper, char **outfile)
         *amper = 0;
 
     /* Output redirection */
-    if (i >= 2 && !strcmp(argv[i - 2], ">"))
+    if (i >= 2 && (!strcmp(argv[i - 2], ">") || !strcmp(argv[i - 2], "2>") || !strcmp(argv[i - 2], ">>")))
     {
         *outfile = argv[i - 1];
         argv[i - 2] = NULL;
@@ -68,6 +68,10 @@ int execute(char *command)
     if (strchr(command, '>') != NULL) // check for redirection
     {
         redirect = 1;
+         if (strstr(command, "2>") != NULL)
+            redirect = 2;
+        else if (strstr(command, ">>") != NULL)
+            redirect = 3;
     }
     else
         redirect = 0;
@@ -115,6 +119,20 @@ int execute(char *command)
         if (redirect == 1)
         {
             fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
+            close(STDOUT_FILENO); 
+            dup(fd); 
+            close(fd);
+        }
+        else if (redirect == 2)
+        {
+            fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
+            close(STDERR_FILENO); 
+            dup(fd); 
+            close(fd);
+        }
+        else if (redirect == 3)
+        {
+            fd = open(outfile, O_CREAT|O_APPEND|O_WRONLY, 0660);
             close(STDOUT_FILENO); 
             dup(fd); 
             close(fd);
