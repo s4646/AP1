@@ -8,6 +8,8 @@
 #include <string.h>
 #include <strings.h>
 
+#define BUFSIZE 128
+
 /* Parse command */
 int parse(char *command, char **argv, int *amper, char **outfile)
 {
@@ -53,8 +55,8 @@ int parse(char *command, char **argv, int *amper, char **outfile)
 /* Execute command */
 int execute(char *command, int *status, char *prompt)
 {
-    char *argv[BUFSIZ], *outfile;
-    int amper, retid, redirect, fd, pipes = 0;
+    char *argv[BUFSIZE], *outfile;
+    int amper, retid, redirect, fd, argc = 0, pipes = 0;
 
     char *pch = strchr(command, '|'); // count pipes
     while (pch != NULL)
@@ -110,11 +112,16 @@ int execute(char *command, int *status, char *prompt)
     }
     
     parse(command, argv, &amper, &outfile);
+    while(argv[argc] != NULL) // count argc
+    {
+        argc++;
+        continue;
+    }
 
     /* Prompt change */
-    if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "="))
+    if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "=") && argc == 3)
     {
-        bzero(prompt, BUFSIZ);
+        bzero(prompt, BUFSIZE);
         memcpy(prompt, argv[2], strlen(argv[2]));
         return 0;
     }
@@ -122,11 +129,14 @@ int execute(char *command, int *status, char *prompt)
     /* Echo */
     if (!strcmp(argv[0], "echo"))
     {
-        if (!strcmp(argv[1], "$?"))
+        if (argc == 2 && argv[1][0] == '$')
         {
-            char num[BUFSIZ] = {'\0'};
-            sprintf(num, "%d", *status);
-            write(STDOUT_FILENO, num, strlen(num));
+            if (!strcmp(argv[1], "$?"))
+            {
+                char num[BUFSIZE] = {'\0'};
+                sprintf(num, "%d", *status);
+                write(STDOUT_FILENO, num, strlen(num));
+            } 
         }
         else
         {
@@ -180,7 +190,7 @@ int execute(char *command, int *status, char *prompt)
 
 int main(int argc, char* argv[])
 {
-    char command[BUFSIZ], prompt[BUFSIZ] = {'\0'};
+    char command[BUFSIZE], prompt[BUFSIZE] = {'\0'};
     memcpy(prompt, "hello", 6);
     int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
     int status;
@@ -190,7 +200,7 @@ int main(int argc, char* argv[])
         write(STDOUT_FILENO, prompt, strlen(prompt));
         write(STDOUT_FILENO, ": ", 3);
 
-        fgets(command, BUFSIZ, stdin);
+        fgets(command, BUFSIZE, stdin);
         command[strlen(command) - 1] = '\0';
 
         execute(command, &status, prompt);
