@@ -27,6 +27,10 @@ int parse(char *command, char **argv, int *amper)
     if (argv[0] == NULL)
         return 0;
 
+    /* Quit shell */ 
+    if (!strcmp(argv[0], "quit"))
+        exit(0);
+
     /* Command end with & */ 
     if (!strcmp(argv[i - 1], "&"))
     {
@@ -49,7 +53,10 @@ int execute(char *command)
 
     if (fork() == 0)
     { 
-        execvp(argv[0], argv);
+        if (execvp(argv[0], argv) == -1)
+            exit(EXIT_FAILURE);
+        else
+            exit(EXIT_SUCCESS);
     }
     /* parent continues here */
     if (amper == 0)
@@ -78,7 +85,6 @@ int main(int argc, char* argv[])
         command[strlen(command) - 1] = '\0';
 
         execute(command);
-
     }
-    
+    return 0;   
 }
