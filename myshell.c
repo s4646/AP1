@@ -54,17 +54,61 @@ int parse(char *command, char **argv, int *amper, char **outfile)
 int execute(char *command)
 {
     char *argv[BUFSIZ], *outfile;
-    int amper, retid, status, redirect, fd;
+    int amper, retid, status, redirect, fd, pipes = 0;
 
-    if (strchr(command, '>') != NULL)
+    // printf("%s\n", command);
+
+    char *pch = strchr(command, '|'); // count pipes
+    while (pch != NULL)
+    {
+        pipes++;
+        pch = strchr(pch + 1, '|');
+    }
+
+    if (strchr(command, '>') != NULL) // check for redirection
     {
         redirect = 1;
     }
     else
         redirect = 0;
 
-    parse(command, argv, &amper, &outfile);
+    /* Piping */
+    if (pipes > 0)
+    {
+        int i = 0;
+        char *commands[pipes+1];
+        char *token = strtok(command, "|");
+        while(token != NULL)
+        {
+            commands[i++] = token;
+            token = strtok(NULL, "|");
+        }
+        // https://stackoverflow.com/questions/21914632/implementing-pipe-in-c
+        for(i = 0; i < pipes; i++)
+        {
+            int pfd[2];
+            pipe(pfd);
 
+            if (!fork())
+            {
+                dup2(pfd[1], 1); // remap output back to parent
+                close(pfd[1]);
+                execute(commands[i]);
+                exit(0);
+            }
+
+            // remap output from previous child to input
+            dup2(pfd[0], 0);
+            close(pfd[1]);
+            retid = wait(&status);
+        }
+        execute(commands[i]);
+
+        return 0;
+    }
+    
+    parse(command, argv, &amper, &outfile);
+    
     if (fork() == 0)
     {
         /* stdout is redirected into outfile */
@@ -91,6 +135,7 @@ int execute(char *command)
 int main(int argc, char* argv[])
 {
     char command[BUFSIZ], pwd[BUFSIZ] = {'\0'};
+    int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
 
     while(1)
     {
@@ -108,6 +153,9 @@ int main(int argc, char* argv[])
         command[strlen(command) - 1] = '\0';
 
         execute(command);
+
+        dup2(save_in, STDIN_FILENO);
+        dup2(save_out, STDOUT_FILENO);
     }
     return 0;   
 }
