@@ -9,7 +9,7 @@
 #include <strings.h>
 
 /* Parse command */
-int parse(char *command, char **argv, int *amper)
+int parse(char *command, char **argv, int *amper, char **outfile)
 {
     char *token;
     int i = 0;
@@ -40,19 +40,42 @@ int parse(char *command, char **argv, int *amper)
     else 
         *amper = 0;
 
+    /* Output redirection */
+    if (i >= 2 && !strcmp(argv[i - 2], ">"))
+    {
+        *outfile = argv[i - 1];
+        argv[i - 2] = NULL;
+    }
+
     return 0;
 }
 
 /* Execute command */
 int execute(char *command)
 {
-    char *argv[BUFSIZ];
-    int amper, retid, status;
+    char *argv[BUFSIZ], *outfile;
+    int amper, retid, status, redirect, fd;
 
-    parse(command, argv, &amper);
+    if (strchr(command, '>') != NULL)
+    {
+        redirect = 1;
+    }
+    else
+        redirect = 0;
+
+    parse(command, argv, &amper, &outfile);
 
     if (fork() == 0)
-    { 
+    {
+        /* stdout is redirected into outfile */
+        if (redirect == 1)
+        {
+            fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
+            close(STDOUT_FILENO); 
+            dup(fd); 
+            close(fd);
+        }
+        
         if (execvp(argv[0], argv) == -1)
             exit(EXIT_FAILURE);
         else
