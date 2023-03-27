@@ -51,12 +51,10 @@ int parse(char *command, char **argv, int *amper, char **outfile)
 }
 
 /* Execute command */
-int execute(char *command)
+int execute(char *command, char *prompt)
 {
     char *argv[BUFSIZ], *outfile;
     int amper, retid, status, redirect, fd, pipes = 0;
-
-    // printf("%s\n", command);
 
     char *pch = strchr(command, '|'); // count pipes
     while (pch != NULL)
@@ -97,7 +95,7 @@ int execute(char *command)
             {
                 dup2(pfd[1], 1); // remap output back to parent
                 close(pfd[1]);
-                execute(commands[i]);
+                execute(commands[i], prompt);
                 exit(0);
             }
 
@@ -106,12 +104,19 @@ int execute(char *command)
             close(pfd[1]);
             retid = wait(&status);
         }
-        execute(commands[i]);
+        execute(commands[i], prompt);
 
         return 0;
     }
     
     parse(command, argv, &amper, &outfile);
+
+    if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "="))
+    {
+        bzero(prompt, BUFSIZ);
+        memcpy(prompt, argv[2], strlen(argv[2]));
+        return 0;
+    }
     
     if (fork() == 0)
     {
@@ -152,25 +157,19 @@ int execute(char *command)
 
 int main(int argc, char* argv[])
 {
-    char command[BUFSIZ], pwd[BUFSIZ] = {'\0'};
+    char command[BUFSIZ], prompt[BUFSIZ] = {'\0'};
+    memcpy(prompt, "hello", 6);
     int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
 
     while(1)
     {
-        // https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
-        if (getcwd(pwd, BUFSIZ) == NULL)
-        {
-            perror("Error");
-            exit(-1);
-        }
-        strcat(pwd, "$ ");
-        fputs(pwd, stdout);
-        bzero(pwd, BUFSIZ);
+        write(STDOUT_FILENO, prompt, strlen(prompt));
+        write(STDOUT_FILENO, ": ", 3);
 
         fgets(command, BUFSIZ, stdin);
         command[strlen(command) - 1] = '\0';
 
-        execute(command);
+        execute(command, prompt);
 
         dup2(save_in, STDIN_FILENO);
         dup2(save_out, STDOUT_FILENO);
