@@ -51,10 +51,10 @@ int parse(char *command, char **argv, int *amper, char **outfile)
 }
 
 /* Execute command */
-int execute(char *command, char *prompt)
+int execute(char *command, int *status, char *prompt)
 {
     char *argv[BUFSIZ], *outfile;
-    int amper, retid, status, redirect, fd, pipes = 0;
+    int amper, retid, redirect, fd, pipes = 0;
 
     char *pch = strchr(command, '|'); // count pipes
     while (pch != NULL)
@@ -95,26 +95,40 @@ int execute(char *command, char *prompt)
             {
                 dup2(pfd[1], 1); // remap output back to parent
                 close(pfd[1]);
-                execute(commands[i], prompt);
+                execute(commands[i], status, prompt);
                 exit(0);
             }
 
             // remap output from previous child to input
             dup2(pfd[0], 0);
             close(pfd[1]);
-            retid = wait(&status);
+            retid = wait(status);
         }
-        execute(commands[i], prompt);
+        execute(commands[i], status, prompt);
 
         return 0;
     }
     
     parse(command, argv, &amper, &outfile);
 
+    /* Prompt change */
     if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "="))
     {
         bzero(prompt, BUFSIZ);
         memcpy(prompt, argv[2], strlen(argv[2]));
+        return 0;
+    }
+    
+    /* Echo */
+    if (!strcmp(argv[0], "echo"))
+    {
+        int i = 0;
+        while(argv[++i] != NULL)
+        {
+            write(STDOUT_FILENO, argv[i], strlen(argv[i]));
+            write(STDOUT_FILENO, " ", 2);
+        }
+        write(STDOUT_FILENO, "\n", 2);
         return 0;
     }
     
@@ -150,7 +164,7 @@ int execute(char *command, char *prompt)
     }
     /* parent continues here */
     if (amper == 0)
-        retid = wait(&status);
+        retid = wait(status);
 
     return 0;
 }
@@ -160,6 +174,7 @@ int main(int argc, char* argv[])
     char command[BUFSIZ], prompt[BUFSIZ] = {'\0'};
     memcpy(prompt, "hello", 6);
     int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
+    int status;
 
     while(1)
     {
@@ -169,7 +184,7 @@ int main(int argc, char* argv[])
         fgets(command, BUFSIZ, stdin);
         command[strlen(command) - 1] = '\0';
 
-        execute(command, prompt);
+        execute(command, &status, prompt);
 
         dup2(save_in, STDIN_FILENO);
         dup2(save_out, STDOUT_FILENO);
