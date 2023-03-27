@@ -122,11 +122,20 @@ int execute(char *command, int *status, char *prompt)
     /* Echo */
     if (!strcmp(argv[0], "echo"))
     {
-        int i = 0;
-        while(argv[++i] != NULL)
+        if (!strcmp(argv[1], "$?"))
         {
-            write(STDOUT_FILENO, argv[i], strlen(argv[i]));
-            write(STDOUT_FILENO, " ", 2);
+            char num[BUFSIZ] = {'\0'};
+            sprintf(num, "%d", *status);
+            write(STDOUT_FILENO, num, strlen(num));
+        }
+        else
+        {
+            int i = 0;
+            while(argv[++i] != NULL)
+            {
+                write(STDOUT_FILENO, argv[i], strlen(argv[i]));
+                write(STDOUT_FILENO, " ", 2);
+            }
         }
         write(STDOUT_FILENO, "\n", 2);
         return 0;
