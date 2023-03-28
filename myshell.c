@@ -7,8 +7,19 @@
 #include <unistd.h>
 #include <string.h>
 #include <strings.h>
+#include <signal.h>
 
 #define BUFSIZE 128
+
+char prompt[BUFSIZE] = {'\0'};
+
+void sigint(int sig)
+{
+    write(STDOUT_FILENO, "\nYou typed Control-C!\n", 23);
+    write(STDOUT_FILENO, prompt, strlen(prompt));
+    write(STDOUT_FILENO, ": ", 3);
+    // exit(9);
+}
 
 /* Parse command */
 int parse(char *command, char **argv, int *amper, char **outfile)
@@ -112,11 +123,7 @@ int execute(char *command, int *status, char *prompt)
     }
     
     parse(command, argv, &amper, &outfile);
-    while(argv[argc] != NULL) // count argc
-    {
-        argc++;
-        continue;
-    }
+    while(argv[argc] != NULL) argc++; // count argc
 
     /* Prompt change */
     if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "=") && argc == 3)
@@ -150,6 +157,10 @@ int execute(char *command, int *status, char *prompt)
         write(STDOUT_FILENO, "\n", 2);
         return 0;
     }
+
+    /* Change directory */
+    if (!strcmp(argv[0], "cd") && argc == 2)
+        *status = chdir(argv[1]);
     
     if (fork() == 0)
     {
@@ -190,7 +201,8 @@ int execute(char *command, int *status, char *prompt)
 
 int main(int argc, char* argv[])
 {
-    char command[BUFSIZE], prompt[BUFSIZE] = {'\0'};
+    signal(SIGINT, sigint);
+    char command[BUFSIZE];
     memcpy(prompt, "hello", 6);
     int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
     int status;
