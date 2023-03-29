@@ -11,8 +11,6 @@
 #include <signal.h>
 #include "memory.h"
 
-#define BUFSIZE 128
-
 void sigint(int sig);
 
 int parse(char *command, char **argv, int *amper, char **outfile);

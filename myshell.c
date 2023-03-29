@@ -1,6 +1,7 @@
 #include "myshell.h"
 
 char prompt[BUFSIZE] = {'\0'};
+List *commands, *variables;
 
 void sigint(int sig)
 {
@@ -29,10 +30,6 @@ int parse(char *command, char **argv, int *amper, char **outfile)
     if (argv[0] == NULL)
         return 0;
 
-    /* Quit shell */ 
-    if (!strcmp(argv[0], "quit"))
-        exit(0);
-
     /* Command end with & */ 
     if (!strcmp(argv[i - 1], "&"))
     {
@@ -55,8 +52,9 @@ int parse(char *command, char **argv, int *amper, char **outfile)
 /* Execute command */
 int execute(char *command, int *status, char *prompt)
 {
-    char *argv[BUFSIZE], *outfile;
+    char *argv[BUFSIZE], *outfile, copy[BUFSIZE];
     int amper, retid, redirect, fd, argc = 0, pipes = 0;
+    memcpy(copy, command, BUFSIZE);
 
     char *pch = strchr(command, '|'); // count pipes
     while (pch != NULL)
@@ -118,6 +116,53 @@ int execute(char *command, int *status, char *prompt)
     parse(command, argv, &amper, &outfile);
     while(argv[argc] != NULL) argc++; // count argc
 
+    /* Quit shell */ 
+    if (!strcmp(argv[0], "quit"))
+    {
+        while(1)
+        {
+            if (commands->head == NULL)
+                break;
+            if(commands->head->next == NULL)
+            {
+                free(commands->head);
+                break;
+            }
+            commands->head = commands->head->next;
+            free(commands->head->prev);
+        }
+        while(1)
+        {
+            if (variables->head == NULL)
+                break;
+            if(variables->head->next == NULL)
+            {
+                free(variables->head);
+                break;
+            }
+            variables->head = variables->head->next;
+            free(variables->head->prev);
+        }
+        
+        free(commands);
+        free(variables);
+        exit(0);
+    }
+
+    /* Last command */
+    if (!strcmp(argv[0], "!!") && argc == 1)
+    {
+        if (commands->latest != NULL)
+            execute(commands->latest->value ,status, prompt);
+        return 0;
+    }
+    else
+    {
+        Item *c = calloc(1, sizeof(Item));
+        memcpy(c->key, copy, strlen(copy)); memcpy(c->value, copy, strlen(copy));
+        addItem(commands, c); 
+    }
+    
     /* Prompt change */
     if (!strcmp(argv[0], "prompt") && !strcmp(argv[1], "=") && argc == 3)
     {
@@ -196,7 +241,7 @@ int execute(char *command, int *status, char *prompt)
     if (amper == 0)
         retid = wait(status);
 
-    return 0;
+    return retid;
 }
 
 int main(int argc, char* argv[])
@@ -206,6 +251,7 @@ int main(int argc, char* argv[])
     memcpy(prompt, "hello", 6);
     int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
     int status;
+    commands = calloc(1, sizeof(List)), variables = calloc(1, sizeof(List));
 
     while(1)
     {

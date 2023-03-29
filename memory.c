@@ -2,7 +2,7 @@
 
 int addItem(List *l, Item *i)
 {
-    if (l->size == 0)
+    if (l->head == NULL)
     {
         l->head = i;
         l->latest = i;
@@ -16,7 +16,6 @@ int addItem(List *l, Item *i)
         i->prev = l->latest;
         l->latest = i;
     }
-    l->size++;
     
     return 0;
 }

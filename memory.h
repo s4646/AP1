@@ -1,17 +1,18 @@
 #pragma once
 #include <stdio.h>
 
+#define BUFSIZE 128
+
 typedef struct Item
 {
-    char *key;
-    char *value;
-    Item *next;
-    Item *prev;
+    char key[BUFSIZE];
+    char value[BUFSIZE];
+    struct Item *next;
+    struct Item *prev;
 } Item;
 
 typedef struct List
 {
-    int size;
     Item *head;
     Item *latest;
 } List;
