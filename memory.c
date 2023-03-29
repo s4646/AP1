@@ -25,7 +25,7 @@ char *getItem(List *l, char *key)
     Item *p = l->head;
     while (p != NULL)
     {
-        if (p->key == key)
+        if (!strcmp(p->key, key))
             return p->value;
         p = p->next;
     }

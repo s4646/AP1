@@ -115,6 +115,7 @@ int execute(char *command, int *status, char *prompt)
     
     parse(command, argv, &amper, &outfile);
     while(argv[argc] != NULL) argc++; // count argc
+    if (argc == 0) return 0;
 
     /* Quit shell */ 
     if (!strcmp(argv[0], "quit"))
@@ -181,7 +182,13 @@ int execute(char *command, int *status, char *prompt)
                 char num[BUFSIZE] = {'\0'};
                 sprintf(num, "%d", *status);
                 write(STDOUT_FILENO, num, strlen(num));
-            } 
+            }
+            else
+            {
+                char *output = getItem(variables, argv[1]);
+                if (output != NULL)
+                    write(STDOUT_FILENO, output, strlen(output));
+            }
         }
         else
         {
@@ -199,7 +206,15 @@ int execute(char *command, int *status, char *prompt)
     /* Change directory */
     if (!strcmp(argv[0], "cd") && argc == 2)
         *status = chdir(argv[1]);
-    
+
+    /* Add variable*/
+    if (argc == 3 && argv[0][0] == '$' && !strcmp(argv[1], "="))
+    {
+        Item *c = calloc(1, sizeof(Item));
+        memcpy(c->key, argv[0], strlen(argv[0])); memcpy(c->value, argv[2], strlen(argv[2]));
+        addItem(variables, c);
+        return 0;
+    }
     if (fork() == 0)
     {
         /* Redirection */
