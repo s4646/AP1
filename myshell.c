@@ -1,15 +1,4 @@
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <strings.h>
-#include <signal.h>
-
-#define BUFSIZE 128
+#include "myshell.h"
 
 char prompt[BUFSIZE] = {'\0'};
 
@@ -172,22 +161,22 @@ int execute(char *command, int *status, char *prompt)
         if (redirect == 1) // stdout is redirected into outfile
         {
             fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
-            close(STDOUT_FILENO); 
-            dup(fd); 
+            close(STDOUT_FILENO);
+            dup(fd);
             close(fd);
         }
         else if (redirect == 2) // stderr is redirected into outfile
         {
             fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
-            close(STDERR_FILENO); 
-            dup(fd); 
+            close(STDERR_FILENO);
+            dup(fd);
             close(fd);
         }
         else if (redirect == 3) // stdout is appended into outfile
         {
             fd = open(outfile, O_CREAT|O_APPEND|O_WRONLY, 0660);
-            close(STDOUT_FILENO); 
-            dup(fd); 
+            close(STDOUT_FILENO);
+            dup(fd);
             close(fd);
         }
         else if (redirect == -1) // stdin redirected into outfile
