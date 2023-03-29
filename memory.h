@@ -1,4 +1,5 @@
 #pragma once
+#include <stdio.h>
 
 typedef struct Item
 {
@@ -17,4 +18,4 @@ typedef struct List
 
 int addItem(List *l, Item *i);
 
-int getItem(List *l, char *key);
+char *getItem(List *l, char *key);
