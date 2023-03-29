@@ -9,7 +9,7 @@
 #include <string.h>
 #include <strings.h>
 #include <signal.h>
-#include "memops.h"
+#include "memory.h"
 
 #define BUFSIZE 128
 
