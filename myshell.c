@@ -53,8 +53,8 @@ int parse(char *command, char **argv, int *amper, char **outfile)
     else 
         *amper = 0;
 
-    /* Output redirection */
-    if (i >= 2 && (!strcmp(argv[i - 2], ">") || !strcmp(argv[i - 2], "2>") || !strcmp(argv[i - 2], ">>")))
+    /* IO redirection */
+    if (i >= 2 && (!strcmp(argv[i - 2], ">") || !strcmp(argv[i - 2], "2>") || !strcmp(argv[i - 2], ">>") || !strcmp(argv[i - 2], "<")))
     {
         *outfile = argv[i - 1];
         argv[i - 2] = NULL;
@@ -83,6 +83,10 @@ int execute(char *command, int *status, char *prompt)
             redirect = 2;
         else if (strstr(command, ">>") != NULL)
             redirect = 3;
+    }
+    else if (strchr(command, '<') != NULL)
+    {
+        redirect = -1;
     }
     else
         redirect = 0;
@@ -164,26 +168,33 @@ int execute(char *command, int *status, char *prompt)
     
     if (fork() == 0)
     {
-        /* stdout is redirected into outfile */
-        if (redirect == 1)
+        /* Redirection */
+        if (redirect == 1) // stdout is redirected into outfile
         {
             fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
             close(STDOUT_FILENO); 
             dup(fd); 
             close(fd);
         }
-        else if (redirect == 2)
+        else if (redirect == 2) // stderr is redirected into outfile
         {
             fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0660);
             close(STDERR_FILENO); 
             dup(fd); 
             close(fd);
         }
-        else if (redirect == 3)
+        else if (redirect == 3) // stdout is appended into outfile
         {
             fd = open(outfile, O_CREAT|O_APPEND|O_WRONLY, 0660);
             close(STDOUT_FILENO); 
             dup(fd); 
+            close(fd);
+        }
+        else if (redirect == -1) // stdin redirected into outfile
+        {
+            fd = open(outfile, O_RDONLY, 0);
+            close(STDIN_FILENO);
+            dup(fd);
             close(fd);
         }
         
