@@ -190,6 +190,23 @@ int execute(char *command, int *status, char *prompt)
                     write(STDOUT_FILENO, output, strlen(output));
             }
         }
+        else if (argc == 4 && !strcmp(argv[1], "Enter") && !strcmp(argv[2], "a") && !strcmp(argv[3], "string"))
+        {
+            char temp[3][BUFSIZE];
+            char var[BUFSIZE];
+            scanf("%s %s", temp[0], temp[1]);
+            while (getchar() != '\n');
+            if (!strcmp(temp[0], "read"))
+            {
+                scanf("%s", temp[2]);
+                while (getchar() != '\n');
+                Item *c = calloc(1, sizeof(Item));
+                snprintf(var, BUFSIZE+1, "$%s", temp[1]);
+                memcpy(c->key, var, strlen(var)); memcpy(c->value, temp[2], strlen(temp[2]));
+                addItem(variables, c);
+                return 0;
+            }
+        }
         else
         {
             int i = 0;
@@ -272,7 +289,7 @@ int main(int argc, char* argv[])
     {
         write(STDOUT_FILENO, prompt, strlen(prompt));
         write(STDOUT_FILENO, ": ", 3);
-
+        
         fgets(command, BUFSIZE, stdin);
         command[strlen(command) - 1] = '\0';
 
