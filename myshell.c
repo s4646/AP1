@@ -2,6 +2,7 @@
 
 char prompt[BUFSIZE] = {'\0'};
 List *commands, *variables;
+Item *command_pointer;
 
 void sigint(int sig)
 {
@@ -157,7 +158,7 @@ int execute(char *command, int *status, char *prompt)
             execute(commands->latest->value ,status, prompt);
         return 0;
     }
-    else
+    else if (argv[0][0] != '\033')
     {
         Item *c = calloc(1, sizeof(Item));
         memcpy(c->key, copy, strlen(copy)); memcpy(c->value, copy, strlen(copy));
@@ -232,6 +233,41 @@ int execute(char *command, int *status, char *prompt)
         addItem(variables, c);
         return 0;
     }
+
+    /* Command navigation */
+    if (argc == 1 && argv[0][0] == '\033') // arrow detected
+    {
+        if (command_pointer == NULL)
+            return 0;
+
+        char new_input[BUFSIZE] = {'\0'}, full_command[BUFSIZE] = {'\0'};
+        
+        switch(argv[0][2]) // real value
+        {
+			case 'A': // arrow up
+                printf("\033[1A"); // line up
+                printf("\x1b[2K"); // delete line
+                printf("%s%s%s", prompt, ": ", command_pointer->value);
+                strcat(full_command, command_pointer->value);
+                command_pointer = command_pointer->prev != NULL ? command_pointer->prev : command_pointer; // get prev command
+			    break;
+                
+			case 'B': // arrow down
+			    printf("down\n");
+			    break;
+    	}
+        fgets(new_input, BUFSIZE, stdin);
+
+        if (new_input[0] == '\033')
+            execute(new_input, status, prompt);
+        else
+        {
+            strcat(full_command, new_input);
+            full_command[strlen(full_command) - 1] = '\0';
+            execute(full_command, status, prompt);
+        }
+    }
+
     if (fork() == 0)
     {
         /* Redirection */
@@ -294,6 +330,7 @@ int main(int argc, char* argv[])
         command[strlen(command) - 1] = '\0';
 
         execute(command, &status, prompt);
+        command_pointer = commands->latest;
 
         dup2(save_in, STDIN_FILENO);
         dup2(save_out, STDOUT_FILENO);
