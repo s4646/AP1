@@ -3,13 +3,21 @@
 char prompt[BUFSIZE] = {'\0'};
 List *commands, *variables;
 Item *command_pointer;
+pid_t parent_pid;
 
 void sigint(int sig)
 {
-    write(STDOUT_FILENO, "\nYou typed Control-C!\n", 23);
-    write(STDOUT_FILENO, prompt, strlen(prompt));
-    write(STDOUT_FILENO, ": ", 3);
-    // exit(9);
+    pid_t self = getpid();
+    if (parent_pid != self) // kill childs
+    {
+        exit(9);
+    }
+    else
+    {
+        write(STDOUT_FILENO, "\nYou typed Control-C!\n", 23);
+        write(STDOUT_FILENO, prompt, strlen(prompt));
+        write(STDOUT_FILENO, ": ", 3);
+    }
 }
 
 /* Parse command */
@@ -326,6 +334,7 @@ int execute(char *command, int *status, char *prompt)
 
 int main(int argc, char* argv[])
 {
+    parent_pid = getpid();
     signal(SIGINT, sigint);
     char command[BUFSIZE];
     memcpy(prompt, "hello", 6);
