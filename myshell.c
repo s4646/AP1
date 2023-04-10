@@ -241,7 +241,7 @@ int execute(char *command, int *status, char *prompt)
             return 0;
 
         char new_input[BUFSIZE] = {'\0'}, full_command[BUFSIZE] = {'\0'};
-        
+        int last_command = 0;
         switch(argv[0][2]) // real value
         {
 			case 'A': // arrow up
@@ -253,9 +253,20 @@ int execute(char *command, int *status, char *prompt)
 			    break;
                 
 			case 'B': // arrow down
-			    printf("down\n");
+                printf("\033[1A"); // line up
+                printf("\x1b[2K"); // delete line
+                if (command_pointer == commands->latest)
+                {
+                    last_command = 1;
+                    break;
+                }
+                command_pointer = command_pointer->next != NULL ? command_pointer->next : command_pointer; // get next command
+                printf("%s%s%s", prompt, ": ", command_pointer->value);
+                strcat(full_command, command_pointer->value);
 			    break;
     	}
+        if (last_command) return 0;
+
         fgets(new_input, BUFSIZE, stdin);
 
         if (new_input[0] == '\033')
@@ -266,6 +277,7 @@ int execute(char *command, int *status, char *prompt)
             full_command[strlen(full_command) - 1] = '\0';
             execute(full_command, status, prompt);
         }
+        return 0;
     }
 
     if (fork() == 0)
@@ -323,8 +335,7 @@ int main(int argc, char* argv[])
 
     while(1)
     {
-        write(STDOUT_FILENO, prompt, strlen(prompt));
-        write(STDOUT_FILENO, ": ", 3);
+        printf("%s%s", prompt, ": ");
         
         fgets(command, BUFSIZE, stdin);
         command[strlen(command) - 1] = '\0';
