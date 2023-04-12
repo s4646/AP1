@@ -5,6 +5,7 @@ List *commands, *variables;
 Item *command_pointer;
 pid_t parent_pid;
 
+// https://stackoverflow.com/questions/18433585/kill-all-child-processes-of-a-parent-but-leave-the-parent-alive
 void sigint(int sig)
 {
     pid_t self = getpid();
@@ -188,15 +189,13 @@ int execute(char *command, int *status, char *prompt)
         {
             if (!strcmp(argv[1], "$?"))
             {
-                char num[BUFSIZE] = {'\0'};
-                sprintf(num, "%d", *status);
-                write(STDOUT_FILENO, num, strlen(num));
+                printf("%d", *status);
             }
             else
             {
                 char *output = getItem(variables, argv[1]);
                 if (output != NULL)
-                    write(STDOUT_FILENO, output, strlen(output));
+                    printf("%s", output);
             }
         }
         else if (argc == 4 && !strcmp(argv[1], "Enter") && !strcmp(argv[2], "a") && !strcmp(argv[3], "string"))
@@ -221,11 +220,10 @@ int execute(char *command, int *status, char *prompt)
             int i = 0;
             while(argv[++i] != NULL)
             {
-                write(STDOUT_FILENO, argv[i], strlen(argv[i]));
-                write(STDOUT_FILENO, " ", 2);
+                printf("%s ", argv[i]);
             }
         }
-        write(STDOUT_FILENO, "\n", 2);
+        printf("\n");
         return 0;
     }
 
