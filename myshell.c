@@ -4,6 +4,7 @@ char prompt[BUFSIZE] = {'\0'};
 List *commands, *variables;
 Item *command_pointer;
 pid_t parent_pid;
+int save_in, save_out;
 
 // https://stackoverflow.com/questions/18433585/kill-all-child-processes-of-a-parent-but-leave-the-parent-alive
 void sigint(int sig)
@@ -89,7 +90,7 @@ int execute(char *command, int *status, char *prompt)
         redirect = 0;
 
     /* Piping */
-    if (pipes > 0)
+    if (pipes > 0 && command[0] != 'i' && command[1] != 'f')
     {
         int i = 0;
         char *commands[pipes+1];
@@ -286,6 +287,81 @@ int execute(char *command, int *status, char *prompt)
         return 0;
     }
 
+    /* IF-ELSE */
+    if (argc > 1 && !strcmp(argv[0], "if"))
+    {
+        int nbytes = 0;
+        char cmd[BUFSIZE] = {'\0'};
+        char tmp[BUFSIZE] = {'\0'};
+
+        for (size_t i = 1; i < argc; i++)
+        {
+            strcat(cmd, argv[i]);
+            strcat(cmd, " ");
+        }
+        cmd[strlen(cmd)-1] = '\0';
+        fd = open("temp.txt", O_CREAT|O_TRUNC|O_RDWR, 0660);
+        close(STDOUT_FILENO);
+        dup(fd);
+        close(fd);
+        execute(cmd, status, prompt);
+        
+        lseek(STDOUT_FILENO, 0, SEEK_SET);
+        nbytes = read(STDOUT_FILENO, tmp, BUFSIZE);
+        close(STDOUT_FILENO);
+        remove("temp.txt");
+        if (nbytes > 0)
+        {
+            fd = open("temp.txt", O_CREAT|O_TRUNC|O_WRONLY, 0660);
+            if (strchr(copy, '|') != NULL)
+                dup2(save_in, STDIN_FILENO);
+            fgets(cmd, BUFSIZE, stdin);
+            cmd[strlen(cmd)-1] = '\0';
+            if (!strcmp(cmd, "then"))
+            {
+                while(1)
+                {
+                    fgets(cmd, BUFSIZE, stdin);
+                    cmd[strlen(cmd)-1] = '\0';
+                    if (!strcmp(cmd, "fi"))
+                    {
+                        dup2(save_out, STDOUT_FILENO);
+                        strcpy(cmd, "cat temp.txt");
+                        execute(cmd, status, prompt);
+                        close(fd);
+                        remove("temp.txt");
+                        return 0;
+                    }
+                    else if (!strcmp(cmd, "else"))
+                    {
+                        while(1)
+                        {
+                            fgets(cmd, BUFSIZE, stdin);
+                            cmd[strlen(cmd)-1] = '\0';
+                            if (!strcmp(cmd, "fi"))
+                            {
+                                dup2(save_out, STDOUT_FILENO);
+                                strcpy(cmd, "cat temp.txt");
+                                execute(cmd, status, prompt);
+                                close(fd);
+                                remove("temp.txt");
+                                return 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        execute(cmd, status, prompt);
+                    }
+                }
+            }
+        }
+        else
+        {
+        }
+    }
+
+
     if (fork() == 0)
     {
         /* Redirection */
@@ -336,7 +412,7 @@ int main(int argc, char* argv[])
     signal(SIGINT, sigint);
     char command[BUFSIZE];
     memcpy(prompt, "hello", 6);
-    int save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
+    save_in = dup(STDIN_FILENO), save_out = dup(STDOUT_FILENO);
     int status;
     commands = calloc(1, sizeof(List)), variables = calloc(1, sizeof(List));
 
