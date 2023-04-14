@@ -386,6 +386,12 @@ int execute(char *command, int *status, char *prompt)
                         }
                     }
                 }
+                else if (!strcmp(cmd, "fi"))
+                {
+                    close(fd);
+                    remove("temp.txt");
+                    return 0;
+                }
             }
         }
     }
