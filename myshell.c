@@ -358,6 +358,35 @@ int execute(char *command, int *status, char *prompt)
         }
         else
         {
+            fd = open("temp.txt", O_CREAT|O_TRUNC|O_WRONLY, 0660);
+            if (strchr(copy, '|') != NULL)
+                dup2(save_in, STDIN_FILENO);
+            while(1)
+            {
+                fgets(cmd, BUFSIZE, stdin);
+                cmd[strlen(cmd)-1] = '\0';
+                if (!strcmp(cmd, "else"))
+                {
+                    while(1)
+                    {
+                        fgets(cmd, BUFSIZE, stdin);
+                        cmd[strlen(cmd)-1] = '\0';
+                        if (!strcmp(cmd, "fi"))
+                        {
+                            dup2(save_out, STDOUT_FILENO);
+                            strcpy(cmd, "cat temp.txt");
+                            execute(cmd, status, prompt);
+                            close(fd);
+                            remove("temp.txt");
+                            return 0;
+                        }
+                        else
+                        {
+                            execute(cmd, status, prompt);
+                        }
+                    }
+                }
+            }
         }
     }
 
