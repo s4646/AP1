@@ -1,5 +1,3 @@
-324205160
-
 ## Usage examples:
 ```ruby
 ubuntu@ubuntu-ASUS-TUF:~/Documents/AP1$ make
